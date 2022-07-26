@@ -4,6 +4,7 @@
 * express
 * socket.io
 * mysql
+* CKEDITOR
 ## 已有功能
 * 发送纯文本消息
 * 历史记录(100条)
