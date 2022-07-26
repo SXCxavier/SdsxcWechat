@@ -1,9 +1,16 @@
 <!DOCTYPE html>
 <html>
     <head>
-
+        <script src="./socket.io/socket.io.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+        <script src="https://cdn.ckeditor.com/4.19.1/standard/ckeditor.js"></script>
     </head>
     <body>
+        <header>
+            <ul>
+                <li><a href="/resetPassword.html">修改密码</a></li>
+            </ul>
+        </header>
         <form id="textform">
             <input type="text" id="textinput">
             <button>发送</button>
@@ -13,21 +20,18 @@
             <button>发送</button>
         </form>
         <button id="changeModeButton">切换编辑模式</button>
-        <ul>
+        <ul id="message">
 
         </ul>
-        <script src="/socket.io/socket.io.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-        <script src="https://cdn.ckeditor.com/4.19.1/standard/ckeditor.js"></script>
         <script>
-            console.log("本项目开源地址:https://github.com/SXCxavier/SdsxcWechat")
+            console.log("本项目开源地址:https://github.com/SXCxavier/SdsxcWechat");
 
             const socket=io();
             const textform=document.querySelector("#textform");
             const htmlform=document.querySelector("#htmlform");
             const textinput=document.querySelector("#textinput");
             const changeModeButton=document.querySelector("#changeModeButton");
-            const ul=document.querySelector("ul");
+            const ul=document.querySelector("#message");
 
             //初始化富文本编辑器
             window.onload = function () {
@@ -37,18 +41,24 @@
 
             //login
             var nickname="";
-            var username=prompt("输入用户名");
-            var password=prompt("输入密码");
-            axios.get("/login?username="+username+"&password="+password).then(function(result){
-                if(result.data=="password error"){
-                    alert("密码错误");
-                    history["go"](-1);
-                }
-                else{
-                    nickname=result.data.nickname;
-                }
-            });
-
+            var login=function(username,password){
+                axios.get("/login?username="+username+"&password="+password).then(function(result){
+                    if(result.data=="password error"){
+                        alert("密码错误");
+                        history["go"](-1);
+                    }
+                    else if(result.data=="no user"){
+                        alert("找不到用户"+username);
+                        history["go"](-1);
+                    }
+                    else{
+                        nickname=result.data.nickname;
+                    }
+                });
+            }
+			
+			login(prompt("用户名"),prompt("密码"));
+			
             //切换消息模式
             var changeMessageMode=function(){
                 textform.hidden=!textform.hidden;
@@ -60,6 +70,9 @@
             textform.addEventListener("submit",function(e){
                 e.preventDefault();
                 if(textinput.value){
+					if(textinput.value.length>500){
+						alert("内容过长，请上传到 https://wormhole.app/ 然后发送超链接或使用富文本模式");
+					}
                     socket.emit("text message",nickname+":"+textinput.value);
                     textinput.value='';
                 }
@@ -67,7 +80,10 @@
             htmlform.addEventListener("submit",function(e){
                 e.preventDefault();
                 if(CKEDITOR.instances.htmleditor.getData()){
-                    socket.emit("html message",nickname+":<br>"+CKEDITOR.instances.htmleditor.getData());
+					if(CKEDITOR.instances.htmleditor.getData().length>51200){
+						alert("内容过长，请上传到 https://wormhole.app/ 然后发送超链接");
+					}
+                    socket.emit("html message",nickname+":"+CKEDITOR.instances.htmleditor.getData());
                     CKEDITOR.instances.htmleditor.setData("");
                 }
             });

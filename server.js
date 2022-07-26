@@ -25,15 +25,52 @@ app.get("/login",function(req,res){
             console.error("sqlerror:"+error);
             return;
         }
-        for(var i=0;i<result.length;i++){
-            if(password==result[i].password){
-                res.send(result[i]);
-                return;
-            }
+        if(result.length<=0){
+            res.send("no user");
+            return;
+        }
+        if(password==result[0].password){
+            res.send(result[0]);
+            return;
         }
         res.send("password error");
     });
 });
+
+app.get("/repassword",function(req,res){
+    var oldPassword=req.query.old;
+    var newPassword=req.query.new;
+    var username=req.query.username;
+    if(username==null||oldPassword==null||newPassword==null){
+        res.send("parameter error");
+        return;
+    }
+    connection.query("select * from user where name='"+username+"'",function(error,result){
+        if(error){
+            console.error("sqlerror:"+error);
+            res.send("SQL崩了,请找管理员修复<br>"+error)
+            return;
+        }
+        if(result.length<=0){
+            res.send("no user");
+            return;
+        }
+        if(oldPassword==result[0].password){
+            connection.query("UPDATE user SET password='"+newPassword+"' WHERE name='"+username+"';",function(error1,result1){
+                if(error1){
+                    console.error("sqlerror:"+error1);
+                    return;
+                }
+                res.send("OK");
+            });
+            return;
+        }
+        res.send("password error");
+    });
+});
+app.get("/resetPassword.html",function(req,res){
+    res.sendFile(__dirname+"\\resetPassword.html")
+})
 
 app.get('/',function(req,res){
     res.sendFile(__dirname+'\\index.html');
