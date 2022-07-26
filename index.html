@@ -4,16 +4,38 @@
 
     </head>
     <body>
-        <form>
-            <input type="text">
+        <form id="textform">
+            <input type="text" id="textinput">
             <button>发送</button>
         </form>
+        <form id="htmlform" hidden=true>
+            <textarea name="htmleditor" id="htmleditor"></textarea>
+            <button>发送</button>
+        </form>
+        <button id="changeModeButton">切换编辑模式</button>
         <ul>
 
         </ul>
         <script src="/socket.io/socket.io.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+        <script src="https://cdn.ckeditor.com/4.19.1/standard/ckeditor.js"></script>
         <script>
+            console.log("本项目开源地址:https://github.com/SXCxavier/SdsxcWechat")
+
+            const socket=io();
+            const textform=document.querySelector("#textform");
+            const htmlform=document.querySelector("#htmlform");
+            const textinput=document.querySelector("#textinput");
+            const changeModeButton=document.querySelector("#changeModeButton");
+            const ul=document.querySelector("ul");
+
+            //初始化富文本编辑器
+            window.onload = function () {
+                CKEDITOR.replace('htmleditor', {height: "50%",width:"100%"});
+            };
+
+
+            //login
             var nickname="";
             var username=prompt("输入用户名");
             var password=prompt("输入密码");
@@ -26,21 +48,39 @@
                     nickname=result.data.nickname;
                 }
             });
-            const socket=io();
-            const form=document.querySelector("form");
-            const input=document.querySelector("input");
-            const ul=document.querySelector("ul");
-            form.addEventListener("submit",function(e){
+
+            //切换消息模式
+            var changeMessageMode=function(){
+                textform.hidden=!textform.hidden;
+                htmlform.hidden=!htmlform.hidden;
+            }
+            changeModeButton.addEventListener("click",changeMessageMode);
+
+            //核心功能
+            textform.addEventListener("submit",function(e){
                 e.preventDefault();
-                if(input.value){
-                    socket.emit("text message",nickname+":"+input.value);
-                    input.value='';
+                if(textinput.value){
+                    socket.emit("text message",nickname+":"+textinput.value);
+                    textinput.value='';
+                }
+            });
+            htmlform.addEventListener("submit",function(e){
+                e.preventDefault();
+                if(CKEDITOR.instances.htmleditor.getData()){
+                    socket.emit("html message",nickname+":<br>"+CKEDITOR.instances.htmleditor.getData());
+                    CKEDITOR.instances.htmleditor.setData("");
                 }
             });
             socket.on("text message",function(msg){
-                console.log(msg);
+                console.log("textMessage:",msg);
                 var li=document.createElement("li");
                 li.textContent=msg;
+                ul.appendChild(li);
+            });
+            socket.on("html message",function(msg){
+                console.log("htmlMessage:",msg);
+                var li=document.createElement("li");
+                li.innerHTML=msg;
                 ul.appendChild(li);
             });
         </script>

@@ -43,12 +43,20 @@ var msgHistory=[];
 
 io.on("connection",function(socket){
     for(var i=0;i<msgHistory.length;i++){
-        socket.emit("text message",msgHistory[i]);
+        socket.emit(msgHistory[i].mode,msgHistory[i].msg);
     }
     socket.on("text message",function(msg){
-        console.log(msg);
-        msgHistory.push(msg);
+        //console.log(msg);
+        msgHistory.push({msg:msg,mode:"text message"});
         io.emit("text message",msg);
+        if(msgHistory.length>=100){
+            msgHistory.shift();
+        }
+    });
+    socket.on("html message",function(msg){
+        //console.log(msg);
+        msgHistory.push({msg:msg,mode:"html message"});
+        io.emit("html message",msg);
         if(msgHistory.length>=100){
             msgHistory.shift();
         }
