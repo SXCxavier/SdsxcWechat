@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+    <head>
+
+    </head>
+    <body>
+        <form>
+            <input type="text">
+            <button>发送</button>
+        </form>
+        <ul>
+
+        </ul>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+        <script>
+            var nickname="";
+            var username=prompt("输入用户名");
+            var password=prompt("输入密码");
+            axios.get("/login?username="+username+"&password="+password).then(function(result){
+                if(result.data=="password error"){
+                    alert("密码错误");
+                    history["go"](-1);
+                }
+                else{
+                    nickname=result.data.nickname;
+                }
+            });
+            const socket=io();
+            const form=document.querySelector("form");
+            const input=document.querySelector("input");
+            const ul=document.querySelector("ul");
+            form.addEventListener("submit",function(e){
+                e.preventDefault();
+                if(input.value){
+                    socket.emit("text message",nickname+":"+input.value);
+                    input.value='';
+                }
+            });
+            socket.on("text message",function(msg){
+                console.log(msg);
+                var li=document.createElement("li");
+                li.textContent=msg;
+                ul.appendChild(li);
+            });
+        </script>
+    </body>
+</html>
