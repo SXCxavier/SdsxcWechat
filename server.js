@@ -6,7 +6,7 @@ const mysql=new require("mysql");
 const connection=mysql.createConnection({
     host:"localhost",
     user:"root",
-    password:"******",
+    password:"*****",
     port:3306,
     database:"wechat"
 });
@@ -30,7 +30,8 @@ app.get("/login",function(req,res){
             return;
         }
         if(password==result[0].password){
-            res.send(result[0]);
+            var ret={uuid:result[0].uuid,name:result[0].name,nickname:result[0].nickname};
+            res.send(ret);
             return;
         }
         res.send("password error");
@@ -45,7 +46,7 @@ app.get("/repassword",function(req,res){
         res.send("parameter error");
         return;
     }
-    connection.query("select * from user where name='"+username+"'",function(error,result){
+    connection.query("select uuid,name,nickname from user where name='"+username+"'",function(error,result){
         if(error){
             console.error("sqlerror:"+error);
             res.send("SQL崩了,请找管理员修复<br>"+error)
@@ -79,9 +80,11 @@ app.get('/',function(req,res){
 var msgHistory=[];
 
 io.on("connection",function(socket){
-    for(var i=0;i<msgHistory.length;i++){
-        socket.emit(msgHistory[i].mode,msgHistory[i].msg);
-    }
+    socket.on("gethis",function(t){
+        for(var i=0;i<msgHistory.length;i++){
+            socket.emit("init "+msgHistory[i].mode,msgHistory[i].msg);
+        }
+    })
     socket.on("text message",function(msg){
         //console.log(msg);
         msgHistory.push({msg:msg,mode:"text message"});

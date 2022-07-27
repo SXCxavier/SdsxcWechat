@@ -1,28 +1,68 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <title>沈石版微信</title>
         <script src="./socket.io/socket.io.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
         <script src="https://cdn.ckeditor.com/4.19.1/standard/ckeditor.js"></script>
     </head>
     <body>
+		<style>
+            footer {
+                width:100%;
+                height:360px;
+                left:0;
+                bottom:0;
+                position: fixed;
+                background-color: white;
+            }
+            #textinput{
+                height:300px;
+                width:100%;
+            }
+            #zhanwei{
+                width:100%;
+                height:360px;
+            }
+            header button{
+                border:hidden;
+                background-color: aqua;
+                font-size: large;
+            }
+		</style>
         <header>
-            <ul>
-                <li><a href="/resetPassword.html">修改密码</a></li>
-            </ul>
+            <button id="gotoResetPassword">修改密码</button>
+            <button id="reLogin">重新登陆</button>
         </header>
-        <form id="textform">
-            <input type="text" id="textinput">
-            <button>发送</button>
-        </form>
-        <form id="htmlform" hidden=true>
-            <textarea name="htmleditor" id="htmleditor"></textarea>
-            <button>发送</button>
-        </form>
-        <button id="changeModeButton">切换编辑模式</button>
-        <ul id="message">
-
+        <script>
+            //顶部菜单栏的相关代码
+            var gotoResetPassword=document.querySelector("#gotoResetPassword");
+            var reLogin=document.querySelector("#reLogin");
+            gotoResetPassword.addEventListener("click",function(e){
+                window.location.href="./resetPassword.html";
+            });
+            reLogin.addEventListener("click",function(e){
+                delCookie("uuid");
+                delCookie("name");
+                delCookie("nickname");
+                login(prompt("用户名"),prompt("密码"));
+            });
+        </script>
+		<ul id="message">
         </ul>
+        <p id="zhanwei"></p>
+		<footer>
+			<form id="textform">
+				<textarea id="textinput"></textarea>
+				<button>发送</button>
+			</form>
+			<form id="htmlform" hidden=true>
+				<textarea name="htmleditor" id="htmleditor"></textarea>
+				<button type="submit">发送</button>
+			</form>
+            <button id="changeModeButton">切换编辑模式</button>
+		</footer>
+
         <script>
             console.log("本项目开源地址:https://github.com/SXCxavier/SdsxcWechat");
 
@@ -35,12 +75,34 @@
 
             //初始化富文本编辑器
             window.onload = function () {
-                CKEDITOR.replace('htmleditor', {height: "50%",width:"100%"});
+                CKEDITOR.replace('htmleditor', {height:"200px",width:"100%"});
             };
 
+            //cookie相关函数
+            function setCookie(cname,cvalue,exdays)
+            {
+                var d = new Date();
+                d.setTime(d.getTime()+(exdays*24*60*60*1000));
+                var expires = "expires="+d.toGMTString();
+                document.cookie = cname + "=" + cvalue + "; " + expires;
+            }
+            function getCookie(cname)
+            {
+                var name = cname + "=";
+                var ca = document.cookie.split(';');
+                for(var i=0; i<ca.length; i++) 
+                {
+                    var c = ca[i].trim();
+                    if (c.indexOf(name)==0) return c.substring(name.length,c.length);
+                }
+                return "";
+            }
+            function delCookie(cname){
+                setCookie(cname,"",0);
+            }
 
             //login
-            var nickname="";
+            var user={uuid:getCookie("uuid"),name:getCookie("name"),nickname:getCookie("nickname")};
             var login=function(username,password){
                 axios.get("/login?username="+username+"&password="+password).then(function(result){
                     if(result.data=="password error"){
@@ -52,12 +114,23 @@
                         history["go"](-1);
                     }
                     else{
-                        nickname=result.data.nickname;
+                        setCookie("uuid",result.data.uuid);
+                        setCookie("name",result.data.name);
+                        setCookie("nickname",result.data.nickname);
+                        user=result.data;
                     }
                 });
             }
-			
-			login(prompt("用户名"),prompt("密码"));
+			//查找历史记录
+            if(user.uuid==""||user.name==""||user.nickname==""){
+                login(prompt("用户名"),prompt("密码"));
+            }
+            else{
+                setCookie("uuid",user.uuid);
+                setCookie("name",user.name);
+                setCookie("nickname",user.nickname);
+                nickname=user.nickname;
+            }
 			
             //切换消息模式
             var changeMessageMode=function(){
@@ -66,6 +139,8 @@
             }
             changeModeButton.addEventListener("click",changeMessageMode);
 
+            //获取历史消息
+            socket.emit("gethis","");
             //核心功能
             textform.addEventListener("submit",function(e){
                 e.preventDefault();
@@ -73,7 +148,7 @@
 					if(textinput.value.length>500){
 						alert("内容过长，请上传到 https://wormhole.app/ 然后发送超链接或使用富文本模式");
 					}
-                    socket.emit("text message",nickname+":"+textinput.value);
+                    socket.emit("text message",user.nickname+":"+textinput.value);
                     textinput.value='';
                 }
             });
@@ -83,7 +158,7 @@
 					if(CKEDITOR.instances.htmleditor.getData().length>51200){
 						alert("内容过长，请上传到 https://wormhole.app/ 然后发送超链接");
 					}
-                    socket.emit("html message",nickname+":"+CKEDITOR.instances.htmleditor.getData());
+                    socket.emit("html message",user.nickname+":"+CKEDITOR.instances.htmleditor.getData());
                     CKEDITOR.instances.htmleditor.setData("");
                 }
             });
